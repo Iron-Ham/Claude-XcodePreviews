@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(scripts/*)",
+      "Bash(xcrun simctl*)",
+      "Bash(xcodebuild*)",
+      "Read(/tmp/preview*.png)",
+      "Read(/tmp/simulator*.png)"
+    ]
+  },
+  "commands": {
+    "preview": {
+      "description": "Build and capture Xcode/SwiftUI preview for visual analysis",
+      "path": ".claude/commands/preview.md"
+    }
+  }
+}

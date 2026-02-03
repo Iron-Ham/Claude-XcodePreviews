@@ -1,0 +1,289 @@
+#!/bin/bash
+#
+# preview - Unified SwiftUI preview capture tool
+#
+# Intelligently builds and captures SwiftUI previews based on the project type:
+# - Standalone Swift files: Builds minimal host app
+# - Single-app projects: Builds the app target
+# - Multi-module projects: Uses existing schemes or guides setup
+#
+# Usage:
+#   preview <file.swift>                    # Standalone file
+#   preview <file.swift> --project <path>   # File in Xcode project
+#   preview <file.swift> --workspace <path> # File in workspace
+#   preview --scheme <name> --project <path> # Build specific scheme
+#   preview --capture                       # Just capture current simulator
+#
+# Options:
+#   --project <path>      Xcode project file
+#   --workspace <path>    Xcode workspace file
+#   --scheme <name>       Scheme to build (auto-detected if omitted)
+#   --target <name>       Target containing the file
+#   --simulator <name>    Simulator to use (default: iPhone 17 Pro)
+#   --output <path>       Output screenshot path (default: /tmp/preview.png)
+#   --wait <seconds>      Wait after launch before capture (default: 3)
+#   --capture             Just capture current simulator, don't build
+#   --verbose             Show build output
+#   --help                Show this help
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Defaults
+SWIFT_FILE=""
+PROJECT=""
+WORKSPACE=""
+SCHEME=""
+TARGET=""
+SIMULATOR="iPhone 17 Pro"
+OUTPUT="/tmp/preview.png"
+WAIT=3
+CAPTURE_ONLY="false"
+VERBOSE="false"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
+
+show_help() {
+    head -25 "$0" | tail -23
+    echo ""
+    echo "Examples:"
+    echo "  preview MyView.swift                    # Build standalone file"
+    echo "  preview ContentView.swift --project MyApp.xcodeproj"
+    echo "  preview --scheme MyApp --project MyApp.xcodeproj"
+    echo "  preview --capture                       # Screenshot current simulator"
+}
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --project) PROJECT="$2"; shift 2 ;;
+        --workspace) WORKSPACE="$2"; shift 2 ;;
+        --scheme) SCHEME="$2"; shift 2 ;;
+        --target) TARGET="$2"; shift 2 ;;
+        --simulator) SIMULATOR="$2"; shift 2 ;;
+        --output|-o) OUTPUT="$2"; shift 2 ;;
+        --wait) WAIT="$2"; shift 2 ;;
+        --capture) CAPTURE_ONLY="true"; shift ;;
+        --verbose|-v) VERBOSE="true"; shift ;;
+        --help|-h) show_help; exit 0 ;;
+        -*)
+            log_error "Unknown option: $1"
+            exit 1
+            ;;
+        *)
+            if [[ -n "$1" && -z "$SWIFT_FILE" ]]; then
+                SWIFT_FILE="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+#=============================================================================
+# Mode: Capture Only
+#=============================================================================
+if [[ "$CAPTURE_ONLY" == "true" ]]; then
+    log_info "Capturing current simulator..."
+    exec "$SCRIPT_DIR/capture-simulator.sh" \
+        --simulator "$SIMULATOR" \
+        --output "$OUTPUT"
+fi
+
+#=============================================================================
+# Mode: Build Scheme (no specific file)
+#=============================================================================
+if [[ -z "$SWIFT_FILE" && -n "$SCHEME" ]]; then
+    if [[ -z "$PROJECT" && -z "$WORKSPACE" ]]; then
+        log_error "Must specify --project or --workspace with --scheme"
+        exit 1
+    fi
+
+    log_info "Building scheme: $SCHEME"
+    exec "$SCRIPT_DIR/xcode-preview.sh" \
+        ${WORKSPACE:+--workspace "$WORKSPACE"} \
+        ${PROJECT:+--project "$PROJECT"} \
+        --scheme "$SCHEME" \
+        --simulator "$SIMULATOR" \
+        --output "$OUTPUT" \
+        --wait "$WAIT" \
+        ${VERBOSE:+--verbose}
+fi
+
+#=============================================================================
+# Mode: Swift File
+#=============================================================================
+if [[ -z "$SWIFT_FILE" ]]; then
+    log_error "No Swift file or --scheme specified"
+    show_help
+    exit 1
+fi
+
+if [[ ! -f "$SWIFT_FILE" ]]; then
+    log_error "File not found: $SWIFT_FILE"
+    exit 1
+fi
+
+SWIFT_FILE="$(cd "$(dirname "$SWIFT_FILE")" && pwd)/$(basename "$SWIFT_FILE")"
+FILENAME=$(basename "$SWIFT_FILE" .swift)
+
+log_info "Preview target: $FILENAME"
+
+# Analyze imports
+IMPORTS=$(grep "^import " "$SWIFT_FILE" | sed 's/import //' | sort -u)
+SYSTEM_ONLY="true"
+
+for imp in $IMPORTS; do
+    case $imp in
+        SwiftUI|UIKit|Foundation|Combine|CoreGraphics|CoreAnimation|QuartzCore|AVFoundation|MapKit|CoreLocation|CoreData|CloudKit|StoreKit|GameKit|SpriteKit|SceneKit|ARKit|RealityKit|Metal|MetalKit|Vision|CoreML|NaturalLanguage|Speech|Intents|UserNotifications|WidgetKit|AppIntents|Charts|Swift|os|Darwin|Dispatch|ObjectiveC|Accelerate|simd|Security|CryptoKit|LocalAuthentication|AuthenticationServices|SafariServices|WebKit|PhotosUI|Photos|Contacts|ContactsUI|EventKit|EventKitUI|Messages|MessageUI|HealthKit|CoreMotion|CoreBluetooth|MultipeerConnectivity|Network|NetworkExtension|CallKit|PushKit|CoreTelephony|SystemConfiguration|MobileCoreServices|UniformTypeIdentifiers|LinkPresentation|QuickLook|QuickLookThumbnailing)
+            # System framework
+            ;;
+        *)
+            SYSTEM_ONLY="false"
+            ;;
+    esac
+done
+
+#-----------------------------------------------------------------------------
+# Standalone Swift file (system imports only)
+#-----------------------------------------------------------------------------
+if [[ "$SYSTEM_ONLY" == "true" && -z "$PROJECT" && -z "$WORKSPACE" ]]; then
+    log_info "Building as standalone file (system frameworks only)"
+    exec "$SCRIPT_DIR/preview-minimal.sh" \
+        "$SWIFT_FILE" \
+        --simulator "$SIMULATOR" \
+        --output "$OUTPUT" \
+        ${VERBOSE:+--verbose}
+fi
+
+#-----------------------------------------------------------------------------
+# File with project context - check for SPM package first
+#-----------------------------------------------------------------------------
+if [[ -z "$PROJECT" && -z "$WORKSPACE" ]]; then
+    # Try to find project/workspace/package in parent directories
+    DIR=$(dirname "$SWIFT_FILE")
+    PACKAGE_SWIFT=""
+
+    while [[ "$DIR" != "/" ]]; do
+        # Check for Package.swift (SPM package)
+        if [[ -f "$DIR/Package.swift" ]]; then
+            PACKAGE_SWIFT="$DIR/Package.swift"
+            log_info "Found SPM package: $PACKAGE_SWIFT"
+            break
+        fi
+        # Look for workspace (exclude internal xcworkspace dirs)
+        FOUND_WS=$(find "$DIR" -maxdepth 1 -name "*.xcworkspace" -type d 2>/dev/null | grep -v ".xcodeproj" | head -1)
+        if [[ -n "$FOUND_WS" ]]; then
+            WORKSPACE="$FOUND_WS"
+            log_info "Found workspace: $WORKSPACE"
+            break
+        fi
+        # Then look for project
+        FOUND_PROJ=$(find "$DIR" -maxdepth 1 -name "*.xcodeproj" -type d 2>/dev/null | head -1)
+        if [[ -n "$FOUND_PROJ" ]]; then
+            PROJECT="$FOUND_PROJ"
+            log_info "Found project: $PROJECT"
+            break
+        fi
+        DIR=$(dirname "$DIR")
+    done
+
+    # If we found an SPM package, use the SPM preview script
+    if [[ -n "$PACKAGE_SWIFT" ]]; then
+        log_info "Using SPM preview for package"
+        exec "$SCRIPT_DIR/preview-spm.sh" \
+            "$SWIFT_FILE" \
+            --package "$PACKAGE_SWIFT" \
+            --simulator "$SIMULATOR" \
+            --output "$OUTPUT" \
+            ${VERBOSE:+--verbose}
+    fi
+
+    if [[ -z "$PROJECT" && -z "$WORKSPACE" ]]; then
+        log_warning "File uses non-system imports but no project found: $IMPORTS"
+        log_info "Attempting standalone build anyway..."
+        exec "$SCRIPT_DIR/preview-minimal.sh" \
+            "$SWIFT_FILE" \
+            --simulator "$SIMULATOR" \
+            --output "$OUTPUT" \
+            ${VERBOSE:+--verbose}
+    fi
+fi
+
+# Check if file has a #Preview block - if so, use dynamic preview injection
+if grep -q "#Preview" "$SWIFT_FILE" 2>/dev/null; then
+    log_info "Found #Preview block - using dynamic preview injection"
+
+    # Prefer project over workspace for dynamic injection
+    if [[ -n "$WORKSPACE" && -z "$PROJECT" ]]; then
+        # Find the .xcodeproj inside/alongside the workspace
+        WS_DIR=$(dirname "$WORKSPACE")
+        PROJECT=$(find "$WS_DIR" -maxdepth 1 -name "*.xcodeproj" -type d 2>/dev/null | head -1)
+    fi
+
+    if [[ -n "$PROJECT" ]]; then
+        exec "$SCRIPT_DIR/preview-dynamic.sh" \
+            "$SWIFT_FILE" \
+            --project "$PROJECT" \
+            ${TARGET:+--target "$TARGET"} \
+            --simulator "$SIMULATOR" \
+            --output "$OUTPUT" \
+            ${VERBOSE:+--verbose}
+    fi
+fi
+
+# Fallback: Build a full scheme (for files without #Preview or when dynamic injection fails)
+if [[ -n "$WORKSPACE" ]]; then
+    BUILD_PATH="$WORKSPACE"
+    BUILD_FLAG="workspace"
+else
+    BUILD_PATH="$PROJECT"
+    BUILD_FLAG="project"
+fi
+
+SCHEMES=$(xcodebuild -${BUILD_FLAG} "$BUILD_PATH" -list 2>/dev/null | \
+    grep -A100 "Schemes:" | tail -n +2 | sed 's/^[ \t]*//' | grep -v "^$" | head -20)
+
+# Find best scheme
+if [[ -z "$SCHEME" ]]; then
+    # Priority: Dev > Debug > Local > first available
+    for pattern in "Dev" "Debug" "Local" "Workspace"; do
+        MATCH=$(echo "$SCHEMES" | grep -i "$pattern" | head -1)
+        if [[ -n "$MATCH" ]]; then
+            SCHEME="$MATCH"
+            break
+        fi
+    done
+
+    # Fall back to first scheme
+    if [[ -z "$SCHEME" ]]; then
+        SCHEME=$(echo "$SCHEMES" | head -1)
+    fi
+fi
+
+if [[ -z "$SCHEME" ]]; then
+    log_error "No buildable scheme found"
+    exit 1
+fi
+
+log_info "Using scheme: $SCHEME"
+log_info "Building full project scheme (this may take longer)..."
+
+exec "$SCRIPT_DIR/xcode-preview.sh" \
+    --${BUILD_FLAG} "$BUILD_PATH" \
+    --scheme "$SCHEME" \
+    --simulator "$SIMULATOR" \
+    --output "$OUTPUT" \
+    --wait "$WAIT" \
+    ${VERBOSE:+--verbose}

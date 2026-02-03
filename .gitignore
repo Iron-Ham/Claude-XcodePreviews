@@ -1,0 +1,29 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode
+*.xcuserstate
+*.xcscmblueprint
+xcuserdata/
+DerivedData/
+*.moved-aside
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Build artifacts
+build/
+*.app
+*.o
+
+# Temporary files
+*.swp
+*.tmp
+*~
+
+# Preview output
+/tmp/
+*.png
+!templates/*.png
