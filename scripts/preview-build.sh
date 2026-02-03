@@ -151,31 +151,12 @@ log_info "Building preview for: $SWIFT_FILE"
 # Find or boot simulator
 find_simulator() {
     local sim_name="$1"
-    xcrun simctl list devices available -j | \
-        python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for runtime, devices in data.get('devices', {}).items():
-    if 'iOS' in runtime:
-        for device in devices:
-            if device['name'] == '$sim_name' and device['isAvailable']:
-                print(device['udid'])
-                sys.exit(0)
-sys.exit(1)
-" 2>/dev/null
+    "$SCRIPT_DIR/preview-helper.rb" find-simulator "$sim_name" 2>/dev/null
 }
 
 boot_simulator() {
     local udid="$1"
-    local state=$(xcrun simctl list devices -j | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for runtime, devices in data.get('devices', {}).items():
-    for device in devices:
-        if device['udid'] == '$udid':
-            print(device['state'])
-            sys.exit(0)
-" 2>/dev/null)
+    local state=$("$SCRIPT_DIR/preview-helper.rb" simulator-state "$udid" 2>/dev/null)
 
     if [[ "$state" != "Booted" ]]; then
         log_info "Booting simulator..."

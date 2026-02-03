@@ -17,6 +17,8 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Default values
 SIMULATOR="booted"
 OUTPUT_PATH="/tmp/simulator-screenshot.png"
@@ -79,45 +81,17 @@ find_simulator_udid() {
         return 0
     fi
 
-    # Find by name
-    xcrun simctl list devices available -j | \
-        python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for runtime, devices in data.get('devices', {}).items():
-    if 'iOS' in runtime:
-        for device in devices:
-            if device['name'] == '$identifier' and device['isAvailable']:
-                print(device['udid'])
-                sys.exit(0)
-sys.exit(1)
-" 2>/dev/null
+    # Find by name using Ruby helper
+    "$SCRIPT_DIR/preview-helper.rb" find-simulator "$identifier" 2>/dev/null
 }
 
 # Get simulator info
 get_simulator_info() {
     local udid="$1"
     if [[ "$udid" == "booted" ]]; then
-        xcrun simctl list devices booted -j | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for runtime, devices in data.get('devices', {}).items():
-    for device in devices:
-        if device['state'] == 'Booted':
-            print(f\"{device['name']} ({device['udid']})\")
-            sys.exit(0)
-print('No booted simulator')
-" 2>/dev/null
+        "$SCRIPT_DIR/preview-helper.rb" first-booted-info 2>/dev/null
     else
-        xcrun simctl list devices -j | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for runtime, devices in data.get('devices', {}).items():
-    for device in devices:
-        if device['udid'] == '$udid':
-            print(f\"{device['name']} ({device['state']})\")
-            sys.exit(0)
-" 2>/dev/null
+        "$SCRIPT_DIR/preview-helper.rb" simulator-info "$udid" 2>/dev/null
     fi
 }
 

@@ -91,7 +91,6 @@ This is much faster than building a full app scheme.
   ```bash
   gem install xcodeproj --user-install
   ```
-- Python 3 (for preview extraction)
 
 ## Workflow for Claude
 

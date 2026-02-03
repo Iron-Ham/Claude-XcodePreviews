@@ -44,18 +44,8 @@ case $ACTION in
         fi
         echo -e "${BLUE}Booting simulator: $TARGET${NC}"
         xcrun simctl boot "$TARGET" 2>/dev/null || {
-            # Try to find by name
-            UDID=$(xcrun simctl list devices available -j | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for runtime, devices in data.get('devices', {}).items():
-    if 'iOS' in runtime:
-        for device in devices:
-            if device['name'] == '$TARGET' and device['isAvailable']:
-                print(device['udid'])
-                sys.exit(0)
-sys.exit(1)
-" 2>/dev/null)
+            # Try to find by name using Ruby helper
+            UDID=$("$SCRIPT_DIR/preview-helper.rb" find-simulator "$TARGET" 2>/dev/null)
             if [[ -n "$UDID" ]]; then
                 xcrun simctl boot "$UDID"
             else

@@ -15,7 +15,6 @@ A CLI toolset for building and capturing SwiftUI previews programmatically. Desi
 - macOS with Xcode installed
 - iOS Simulator
 - Ruby with `xcodeproj` gem: `gem install xcodeproj --user-install`
-- Python 3 (for preview extraction)
 
 ## Installation
 

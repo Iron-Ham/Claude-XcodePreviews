@@ -135,36 +135,14 @@ FILENAME=$(basename "$SWIFT_FILE" .swift)
 log_info "Building minimal preview for: $SWIFT_FILE"
 
 # Find simulator
-find_simulator_udid() {
-    xcrun simctl list devices available -j | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for runtime, devices in data.get('devices', {}).items():
-    if 'iOS' in runtime:
-        for device in devices:
-            if device['name'] == '$SIMULATOR' and device['isAvailable']:
-                print(device['udid'])
-                sys.exit(0)
-sys.exit(1)
-" 2>/dev/null
-}
-
-SIM_UDID=$(find_simulator_udid)
+SIM_UDID=$("$SCRIPT_DIR/preview-helper.rb" find-simulator "$SIMULATOR" 2>/dev/null)
 if [[ -z "$SIM_UDID" ]]; then
     log_error "Simulator not found: $SIMULATOR"
     exit 1
 fi
 
 # Boot simulator if needed
-BOOT_STATE=$(xcrun simctl list devices -j | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for runtime, devices in data.get('devices', {}).items():
-    for device in devices:
-        if device['udid'] == '$SIM_UDID':
-            print(device['state'])
-            sys.exit(0)
-" 2>/dev/null)
+BOOT_STATE=$("$SCRIPT_DIR/preview-helper.rb" simulator-state "$SIM_UDID" 2>/dev/null)
 
 if [[ "$BOOT_STATE" != "Booted" ]]; then
     log_info "Booting simulator..."

@@ -116,17 +116,7 @@ if [[ -z "$TARGET" ]]; then
 fi
 
 # Find simulator
-SIM_UDID=$(xcrun simctl list devices available -j | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for runtime, devices in data.get('devices', {}).items():
-    if 'iOS' in runtime:
-        for device in devices:
-            if device['name'] == '$SIMULATOR' and device['isAvailable']:
-                print(device['udid'])
-                sys.exit(0)
-sys.exit(1)
-" 2>/dev/null)
+SIM_UDID=$("$SCRIPT_DIR/preview-helper.rb" find-simulator "$SIMULATOR" 2>/dev/null)
 
 if [[ -z "$SIM_UDID" ]]; then
     log_error "Simulator not found: $SIMULATOR"
@@ -151,68 +141,8 @@ fi
 PREVIEW_DIR="$PROJECT_DIR/PreviewHost"
 mkdir -p "$PREVIEW_DIR"
 
-# Extract preview body - handle various #Preview formats with nested braces
-PREVIEW_BODY=$(python3 << PYEOF
-import re
-import sys
-
-with open("$SWIFT_FILE", "r") as f:
-    content = f.read()
-
-# Find #Preview and extract its body using brace counting
-preview_match = re.search(r'#Preview(?:\s*\([^)]*\))?\s*\{', content)
-if not preview_match:
-    print("Text(\"No #Preview found\")")
-    sys.exit(0)
-
-# Start after the opening brace
-start = preview_match.end()
-brace_count = 1
-pos = start
-
-while pos < len(content) and brace_count > 0:
-    char = content[pos]
-    if char == '{':
-        brace_count += 1
-    elif char == '}':
-        brace_count -= 1
-    pos += 1
-
-if brace_count != 0:
-    print("Text(\"Malformed #Preview\")")
-    sys.exit(0)
-
-# Extract body (excluding final closing brace)
-body = content[start:pos-1]
-
-# Dedent the body properly
-lines = body.split('\n')
-
-# Remove leading/trailing empty lines
-while lines and not lines[0].strip():
-    lines.pop(0)
-while lines and not lines[-1].strip():
-    lines.pop()
-
-if lines:
-    # Find minimum indentation (excluding empty lines)
-    min_indent = float('inf')
-    for line in lines:
-        if line.strip():
-            indent = len(line) - len(line.lstrip())
-            min_indent = min(min_indent, indent)
-
-    # Dedent all lines by min_indent
-    if min_indent < float('inf') and min_indent > 0:
-        lines = [line[min_indent:] if len(line) >= min_indent else line for line in lines]
-
-    body = '\n'.join(lines)
-else:
-    body = ""
-
-print(body)
-PYEOF
-)
+# Extract preview body using Ruby helper
+PREVIEW_BODY=$("$SCRIPT_DIR/preview-helper.rb" extract-preview "$SWIFT_FILE")
 
 # Generate imports - include the target module if detected
 IMPORT_STATEMENTS=""
