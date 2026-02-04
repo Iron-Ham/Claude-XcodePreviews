@@ -18,13 +18,19 @@ A CLI toolset for building and capturing SwiftUI previews programmatically. Desi
 
 ## Installation
 
-### 1. Clone the repository
+### User-Level Install (Global)
+
+This makes `/preview` available in all your Claude Code sessions.
+
+> **Note:** For repo-level installs, you'd instead copy the `.claude/commands/` directory into your project's repo. The symlink and `~/.claude/commands` steps below are specific to user-level installs.
+
+#### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Iron-Ham/Claude-XcodePreviews.git
 ```
 
-### 2. Create symlink (if you cloned elsewhere)
+#### 2. Create symlink (if you cloned elsewhere)
 
 The skill expects scripts at `~/Claude-XcodePreviews`. If you cloned to a different location, create a symlink:
 
@@ -32,13 +38,13 @@ The skill expects scripts at `~/Claude-XcodePreviews`. If you cloned to a differ
 ln -s /path/to/Claude-XcodePreviews ~/Claude-XcodePreviews
 ```
 
-### 3. Install the Ruby dependency
+#### 3. Install the Ruby dependency
 
 ```bash
 gem install xcodeproj --user-install
 ```
 
-### 4. Install the Claude Code skill
+#### 4. Install the Claude Code skill
 
 ```bash
 mkdir -p ~/.claude/commands
