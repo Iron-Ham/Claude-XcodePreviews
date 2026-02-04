@@ -12,44 +12,59 @@ This skill allows you to build SwiftUI views and capture screenshots of their re
 
 - Building standalone Swift files containing SwiftUI views
 - Building views from existing Xcode projects
+- Building views from SPM packages
 - Capturing the current simulator screen
 - Analyzing the captured screenshots
 
+## Installation Path
+
+Scripts are located at `${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}/scripts/`
+
 ## Available Commands
+
+### Unified Preview (Recommended)
+Auto-detects project type and uses the best approach:
+
+```bash
+"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview \
+  <path-to-file.swift> \
+  --output /tmp/preview.png
+```
 
 ### Quick Capture (Current Simulator)
 Capture a screenshot of whatever is currently displayed on the booted simulator.
 
 ```bash
-/Users/zer0/Developer/oss/PreviewBuild/scripts/capture-simulator.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/capture-simulator.sh \
   --output /tmp/preview-capture.png
 ```
 
-### Build and Preview (Xcode Project)
-Build an Xcode project and capture its initial screen.
+### Dynamic Preview Injection (Xcode Projects)
+Fast builds by injecting a minimal PreviewHost target:
 
 ```bash
-/Users/zer0/Developer/oss/PreviewBuild/scripts/xcode-preview.sh \
-  --project <path-to.xcodeproj> \
-  --scheme <scheme-name> \
-  --output /tmp/preview-capture.png
-```
-
-Or with a workspace:
-```bash
-/Users/zer0/Developer/oss/PreviewBuild/scripts/xcode-preview.sh \
-  --workspace <path-to.xcworkspace> \
-  --scheme <scheme-name> \
-  --output /tmp/preview-capture.png
-```
-
-### Build Standalone Swift File
-Build a standalone Swift file containing a SwiftUI view.
-
-```bash
-/Users/zer0/Developer/oss/PreviewBuild/scripts/preview-build.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview-dynamic.sh \
   <path-to-file.swift> \
-  --output /tmp/preview-capture.png
+  --project <path.xcodeproj> \
+  --output /tmp/preview.png
+```
+
+### SPM Package Preview
+For files in Swift Package Manager packages:
+
+```bash
+"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview-spm.sh \
+  <path-to-file.swift> \
+  --output /tmp/preview.png
+```
+
+### Standalone Swift File
+Build a standalone Swift file with system frameworks only:
+
+```bash
+"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview-minimal.sh \
+  <path-to-file.swift> \
+  --output /tmp/preview.png
 ```
 
 ## Workflow
@@ -78,7 +93,7 @@ The user can specify:
 - `project`: Path to an Xcode project
 - `workspace`: Path to an Xcode workspace
 - `scheme`: Build scheme name
-- `simulator`: Simulator to use (default: "iPhone 16 Pro")
+- `simulator`: Simulator to use (default: "iPhone 17 Pro")
 - `wait`: Seconds to wait before capture (default: 3)
 
 ## Example Usage
