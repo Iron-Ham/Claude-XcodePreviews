@@ -18,7 +18,7 @@ This skill allows you to build SwiftUI views and capture screenshots of their re
 
 ## Installation Path
 
-Scripts are located at `${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}/scripts/`
+Scripts are located at `${CLAUDE_PLUGIN_ROOT}/scripts/`
 
 ## Available Commands
 
@@ -26,7 +26,7 @@ Scripts are located at `${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}/script
 Auto-detects project type and uses the best approach:
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview \
+"${CLAUDE_PLUGIN_ROOT}"/scripts/preview \
   <path-to-file.swift> \
   --output /tmp/preview.png
 ```
@@ -35,7 +35,7 @@ Auto-detects project type and uses the best approach:
 Capture a screenshot of whatever is currently displayed on the booted simulator.
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/capture-simulator.sh \
+"${CLAUDE_PLUGIN_ROOT}"/scripts/capture-simulator.sh \
   --output /tmp/preview-capture.png
 ```
 
@@ -43,7 +43,7 @@ Capture a screenshot of whatever is currently displayed on the booted simulator.
 Fast builds by injecting a minimal PreviewHost target:
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview-dynamic.sh \
+"${CLAUDE_PLUGIN_ROOT}"/scripts/preview-dynamic.sh \
   <path-to-file.swift> \
   --project <path.xcodeproj> \
   --output /tmp/preview.png
@@ -53,7 +53,7 @@ Fast builds by injecting a minimal PreviewHost target:
 For files in Swift Package Manager packages:
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview-spm.sh \
+"${CLAUDE_PLUGIN_ROOT}"/scripts/preview-spm.sh \
   <path-to-file.swift> \
   --output /tmp/preview.png
 ```
@@ -62,7 +62,7 @@ For files in Swift Package Manager packages:
 Build a standalone Swift file with system frameworks only:
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview-minimal.sh \
+"${CLAUDE_PLUGIN_ROOT}"/scripts/preview-minimal.sh \
   <path-to-file.swift> \
   --output /tmp/preview.png
 ```

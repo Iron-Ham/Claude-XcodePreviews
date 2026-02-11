@@ -18,11 +18,24 @@ A CLI toolset for building and capturing SwiftUI previews programmatically. Desi
 
 ## Installation
 
-### User-Level Install (Global)
+### Plugin Marketplace (Recommended)
 
-This makes `/preview` available in all your Claude Code sessions.
+Install via the Claude Code plugin marketplace:
 
-> **Note:** For repo-level installs, you'd instead copy the `.claude/commands/` directory into your project's repo. The symlink and `~/.claude/commands` steps below are specific to user-level installs.
+```
+/plugin marketplace add Iron-Ham/Claude-XcodePreviews
+/plugin install preview-build@Claude-XcodePreviews
+```
+
+Then install the Ruby dependency:
+
+```bash
+gem install xcodeproj --user-install
+```
+
+### Manual Install (Fallback)
+
+If you prefer a manual setup:
 
 #### 1. Clone the repository
 
@@ -30,26 +43,25 @@ This makes `/preview` available in all your Claude Code sessions.
 git clone https://github.com/Iron-Ham/Claude-XcodePreviews.git
 ```
 
-#### 2. Create symlink (if you cloned elsewhere)
-
-The skill expects scripts at `~/Claude-XcodePreviews`. If you cloned to a different location, create a symlink:
-
-```bash
-ln -s /path/to/Claude-XcodePreviews ~/Claude-XcodePreviews
-```
-
-#### 3. Install the Ruby dependency
+#### 2. Install the Ruby dependency
 
 ```bash
 gem install xcodeproj --user-install
 ```
 
-#### 4. Install the Claude Code skill
+#### 3. Install the Claude Code skill
+
+Copy the skill definition to your user-level commands directory:
 
 ```bash
 mkdir -p ~/.claude/commands
-cp ~/Claude-XcodePreviews/.claude/commands/preview.md ~/.claude/commands/
+cp Claude-XcodePreviews/.claude/commands/preview.md ~/.claude/commands/
 ```
+
+> **Note:** The manual install expects scripts at `~/Claude-XcodePreviews`. If you cloned to a different location, create a symlink:
+> ```bash
+> ln -s /path/to/Claude-XcodePreviews ~/Claude-XcodePreviews
+> ```
 
 ## Usage
 
@@ -142,6 +154,30 @@ Claude will:
 | `preview-minimal.sh` | Standalone files |
 | `capture-simulator.sh` | Screenshot capture |
 | `sim-manager.sh` | Simulator utilities |
+
+## Project Structure
+
+```
+Claude-XcodePreviews/
+├── .claude-plugin/
+│   ├── marketplace.json    # Plugin marketplace catalog
+│   └── plugin.json         # Plugin manifest
+├── .claude/
+│   ├── commands/
+│   │   └── preview.md      # Slash command (manual install)
+│   └── settings.json       # Project permissions
+├── skills/
+│   └── preview/
+│       └── SKILL.md        # Plugin skill definition
+├── scripts/
+│   ├── preview             # Unified entry point
+│   ├── preview-dynamic.sh  # Xcode project injection
+│   ├── preview-spm.sh      # SPM package preview
+│   ├── preview-minimal.sh  # Standalone files
+│   ├── capture-simulator.sh
+│   └── sim-manager.sh
+└── templates/
+```
 
 ## License
 
