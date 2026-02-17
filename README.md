@@ -29,8 +29,8 @@ gem install xcodeproj --user-install
 Install via the Claude Code plugin marketplace:
 
 ```
-/plugin marketplace add Iron-Ham/Claude-XcodePreviews
-/plugin install preview-build@Claude-XcodePreviews
+/plugin marketplace add Iron-Ham/XcodePreviews
+/plugin install preview-build@XcodePreviews
 ```
 
 ### Claude Code: Manual Install
@@ -38,7 +38,7 @@ Install via the Claude Code plugin marketplace:
 #### 1. Clone the repository
 
 ```bash
-git clone https://github.com/Iron-Ham/Claude-XcodePreviews.git ~/Claude-XcodePreviews
+git clone https://github.com/Iron-Ham/XcodePreviews.git ~/XcodePreviews
 ```
 
 #### 2. Install the Claude Code skill
@@ -47,20 +47,22 @@ Copy the skill definition to your user-level commands directory:
 
 ```bash
 mkdir -p ~/.claude/commands
-cp ~/Claude-XcodePreviews/.claude/commands/preview.md ~/.claude/commands/
+cp ~/XcodePreviews/.claude/commands/preview.md ~/.claude/commands/
 ```
 
-> **Note:** The manual install expects scripts at `~/Claude-XcodePreviews`. If you cloned to a different location, create a symlink:
+> **Note:** The manual install expects scripts at `~/XcodePreviews`. If you cloned to a different location, set `PREVIEW_BUILD_PATH`:
 > ```bash
-> ln -s /path/to/Claude-XcodePreviews ~/Claude-XcodePreviews
+> export PREVIEW_BUILD_PATH=/path/to/XcodePreviews
 > ```
+
+> **Upgrading from `Claude-XcodePreviews`?** The old path `~/Claude-XcodePreviews` still works — the skill files fall back to it automatically. You can rename your clone at any time, or just leave it.
 
 ### Cursor: Install
 
 #### 1. Clone the repository
 
 ```bash
-git clone https://github.com/Iron-Ham/Claude-XcodePreviews.git ~/Claude-XcodePreviews
+git clone https://github.com/Iron-Ham/XcodePreviews.git ~/XcodePreviews
 ```
 
 #### 2. Install the Cursor skill
@@ -69,7 +71,7 @@ Copy the skill to your user-level skills directory:
 
 ```bash
 mkdir -p ~/.cursor/skills/preview
-cp ~/Claude-XcodePreviews/.cursor/skills/preview/SKILL.md ~/.cursor/skills/preview/
+cp ~/XcodePreviews/.cursor/skills/preview/SKILL.md ~/.cursor/skills/preview/
 ```
 
 #### 3. (Optional) Install the workspace rule
@@ -78,12 +80,12 @@ If you want the preview toolkit context always available in a specific project, 
 
 ```bash
 mkdir -p /path/to/your/project/.cursor/rules
-cp ~/Claude-XcodePreviews/.cursor/rules/preview.mdc /path/to/your/project/.cursor/rules/
+cp ~/XcodePreviews/.cursor/rules/preview.mdc /path/to/your/project/.cursor/rules/
 ```
 
-> **Note:** Like the Claude Code install, this expects scripts at `~/Claude-XcodePreviews`. Set `PREVIEW_BUILD_PATH` to override:
+> **Note:** Like the Claude Code install, this expects scripts at `~/XcodePreviews`. Set `PREVIEW_BUILD_PATH` to override:
 > ```bash
-> export PREVIEW_BUILD_PATH=/path/to/Claude-XcodePreviews
+> export PREVIEW_BUILD_PATH=/path/to/XcodePreviews
 > ```
 
 ## Usage
@@ -184,7 +186,7 @@ Codex can use the same scripts through a Codex skill.
 ### Install Codex Skill
 
 ```bash
-export PREVIEW_BUILD_PATH=/absolute/path/to/Claude-XcodePreviews
+export PREVIEW_BUILD_PATH=/absolute/path/to/XcodePreviews
 mkdir -p ~/.codex/skills/public/xcode-preview-capture
 cp -R "$PREVIEW_BUILD_PATH"/.codex/skills/xcode-preview-capture/* \
   ~/.codex/skills/public/xcode-preview-capture/
@@ -213,7 +215,7 @@ Ask Codex to preview a SwiftUI file. The skill instructs Codex to:
 ## Project Structure
 
 ```
-Claude-XcodePreviews/
+XcodePreviews/
 ├── .claude/                        # Claude Code integration
 │   ├── commands/
 │   │   └── preview.md              #   Slash command

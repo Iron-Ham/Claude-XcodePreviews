@@ -16,7 +16,7 @@ Use this skill to build SwiftUI previews and inspect screenshots.
 gem install xcodeproj --user-install
 ```
 - `PREVIEW_BUILD_PATH` set to this repository root
-  - Example: `export PREVIEW_BUILD_PATH=/absolute/path/to/Claude-XcodePreviews`
+  - Example: `export PREVIEW_BUILD_PATH=/absolute/path/to/XcodePreviews`
 
 ## Primary Command
 

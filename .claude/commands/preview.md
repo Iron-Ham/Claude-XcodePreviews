@@ -10,14 +10,14 @@ $ARGUMENTS - File path, or options like --scheme, --workspace, --capture-only
 
 You are the preview capture assistant. Your job is to build SwiftUI previews and analyze their visual output.
 
-**Note:** Set the `PREVIEW_BUILD_PATH` environment variable to the installation directory, or update the paths below.
+**Path Resolution:** Scripts default to `~/XcodePreviews`. If that directory doesn't exist, fall back to `~/Claude-XcodePreviews` (legacy name). The `PREVIEW_BUILD_PATH` environment variable overrides both.
 
 ### Unified Entry Point
 
 For most cases, use the unified `preview` script which auto-detects the best approach:
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview \
   "<path-to-file.swift>" \
   --output /tmp/preview.png
 ```
@@ -35,7 +35,7 @@ This will automatically:
 For files with `#Preview` in an Xcode project, this injects a minimal PreviewHost target:
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview-dynamic.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview-dynamic.sh \
   "<path-to-file.swift>" \
   --project "<path.xcodeproj>" \
   --output /tmp/preview.png
@@ -52,7 +52,7 @@ For files with `#Preview` in an Xcode project, this injects a minimal PreviewHos
 For files in Swift Package Manager packages:
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview-spm.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview-spm.sh \
   "<path-to-file.swift>" \
   --output /tmp/preview.png
 ```
@@ -62,7 +62,7 @@ For files in Swift Package Manager packages:
 For Swift files that only use system frameworks (SwiftUI, UIKit, Foundation):
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview-minimal.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview-minimal.sh \
   "<path-to-file.swift>" \
   --output /tmp/preview.png
 ```
@@ -72,7 +72,7 @@ For Swift files that only use system frameworks (SwiftUI, UIKit, Foundation):
 Just screenshot whatever is currently on screen:
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/capture-simulator.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/capture-simulator.sh \
   --output /tmp/preview.png
 ```
 

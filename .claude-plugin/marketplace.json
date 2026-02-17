@@ -10,8 +10,8 @@
     "description": "Build and capture SwiftUI previews for visual analysis. Supports Xcode projects, SPM packages, and standalone Swift files.",
     "version": "1.0.0",
     "author": { "name": "Iron-Ham" },
-    "homepage": "https://github.com/Iron-Ham/Claude-XcodePreviews",
-    "repository": "https://github.com/Iron-Ham/Claude-XcodePreviews",
+    "homepage": "https://github.com/Iron-Ham/XcodePreviews",
+    "repository": "https://github.com/Iron-Ham/XcodePreviews",
     "license": "MIT",
     "keywords": ["swift", "swiftui", "preview", "xcode", "simulator", "ios"],
     "category": "development"
