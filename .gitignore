@@ -17,6 +17,7 @@ DerivedData/
 build/
 *.app
 *.o
+tools/preview-tool/.build/
 
 # Temporary files
 *.swp
