@@ -177,6 +177,28 @@ In both cases, the assistant will:
 2. Capture a screenshot
 3. Analyze and describe the visual output
 
+## Codex Integration
+
+Codex can use the same scripts through a Codex skill.
+
+### Install Codex Skill
+
+```bash
+export PREVIEW_BUILD_PATH=/absolute/path/to/Claude-XcodePreviews
+mkdir -p ~/.codex/skills/public/xcode-preview-capture
+cp -R "$PREVIEW_BUILD_PATH"/.codex/skills/xcode-preview-capture/* \
+  ~/.codex/skills/public/xcode-preview-capture/
+```
+
+Set `PREVIEW_BUILD_PATH` in your shell profile so Codex can invoke the scripts from any location.
+
+### Use with Codex
+
+Ask Codex to preview a SwiftUI file. The skill instructs Codex to:
+1. Run `scripts/preview` with your target file
+2. Capture `/tmp/preview*.png`
+3. Read the screenshot and provide UI analysis
+
 ## Scripts
 
 | Script | Purpose |
@@ -199,6 +221,10 @@ Claude-XcodePreviews/
 ├── .claude-plugin/                 # Claude Code plugin marketplace
 │   ├── marketplace.json
 │   └── plugin.json
+├── .codex/                         # Codex integration
+│   └── skills/
+│       └── xcode-preview-capture/
+│           └── SKILL.md            #   Codex skill definition
 ├── .cursor/                        # Cursor integration
 │   ├── rules/
 │   │   └── preview.mdc             #   Workspace rule
