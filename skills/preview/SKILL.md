@@ -39,21 +39,21 @@ Capture a screenshot of whatever is currently displayed on the booted simulator.
   --output /tmp/preview-capture.png
 ```
 
-### Dynamic Preview Injection (Xcode Projects)
-Fast builds by injecting a minimal PreviewHost target:
+### Xcode Project with #Preview
+Fast builds by injecting a minimal PreviewHost target (handled automatically by the unified script):
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}"/scripts/preview-dynamic.sh \
+"${CLAUDE_PLUGIN_ROOT}"/scripts/preview \
   <path-to-file.swift> \
   --project <path.xcodeproj> \
   --output /tmp/preview.png
 ```
 
 ### SPM Package Preview
-For files in Swift Package Manager packages:
+Auto-detected from Package.swift in parent directories:
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}"/scripts/preview-spm.sh \
+"${CLAUDE_PLUGIN_ROOT}"/scripts/preview \
   <path-to-file.swift> \
   --output /tmp/preview.png
 ```
@@ -62,7 +62,7 @@ For files in Swift Package Manager packages:
 Build a standalone Swift file with system frameworks only:
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}"/scripts/preview-minimal.sh \
+"${CLAUDE_PLUGIN_ROOT}"/scripts/preview \
   <path-to-file.swift> \
   --output /tmp/preview.png
 ```

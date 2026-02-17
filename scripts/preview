@@ -36,11 +36,13 @@ PROJECT=""
 WORKSPACE=""
 SCHEME=""
 TARGET=""
+MODULE=""
 SIMULATOR="iPhone 17 Pro"
 OUTPUT="/tmp/preview.png"
 WAIT=3
 CAPTURE_ONLY="false"
-VERBOSE="false"
+KEEP=""
+VERBOSE=""
 
 # Colors
 RED='\033[0;31m'
@@ -54,6 +56,28 @@ log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
 log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
+
+# Ensure preview-tool binary is built and up-to-date.
+# Rebuilds if binary is missing or any source file is newer than the binary.
+ensure_preview_tool() {
+    local TOOL_DIR="$SCRIPT_DIR/../tools/preview-tool"
+    PREVIEW_TOOL="$TOOL_DIR/.build/release/preview-tool"
+
+    local needs_build="false"
+    if [[ ! -f "$PREVIEW_TOOL" ]]; then
+        needs_build="true"
+    elif find "$TOOL_DIR/Sources" "$TOOL_DIR/Package.swift" -newer "$PREVIEW_TOOL" -print -quit 2>/dev/null | grep -q .; then
+        needs_build="true"
+    fi
+
+    if [[ "$needs_build" == "true" ]]; then
+        log_info "Building preview tool..."
+        if ! swift build -c release --package-path "$TOOL_DIR" 2>&1 | tail -5; then
+            log_error "Failed to build preview tool"
+            exit 1
+        fi
+    fi
+}
 
 show_help() {
     head -25 "$0" | tail -23
@@ -72,10 +96,12 @@ while [[ $# -gt 0 ]]; do
         --workspace) WORKSPACE="$2"; shift 2 ;;
         --scheme) SCHEME="$2"; shift 2 ;;
         --target) TARGET="$2"; shift 2 ;;
+        --module) MODULE="$2"; shift 2 ;;
         --simulator) SIMULATOR="$2"; shift 2 ;;
         --output|-o) OUTPUT="$2"; shift 2 ;;
         --wait) WAIT="$2"; shift 2 ;;
         --capture) CAPTURE_ONLY="true"; shift ;;
+        --keep) KEEP="true"; shift ;;
         --verbose|-v) VERBOSE="true"; shift ;;
         --help|-h) show_help; exit 0 ;;
         -*)
@@ -199,14 +225,17 @@ if [[ -z "$PROJECT" && -z "$WORKSPACE" ]]; then
         DIR=$(dirname "$DIR")
     done
 
-    # If we found an SPM package, use the SPM preview script
+    # If we found an SPM package, use preview-tool preview-spm
     if [[ -n "$PACKAGE_SWIFT" ]]; then
         log_info "Using SPM preview for package"
-        exec "$SCRIPT_DIR/preview-spm.sh" \
-            "$SWIFT_FILE" \
+        ensure_preview_tool
+        exec "$PREVIEW_TOOL" preview-spm \
+            --file "$SWIFT_FILE" \
             --package "$PACKAGE_SWIFT" \
+            ${MODULE:+--module "$MODULE"} \
             --simulator "$SIMULATOR" \
             --output "$OUTPUT" \
+            ${KEEP:+--keep} \
             ${VERBOSE:+--verbose}
     fi
 
@@ -233,8 +262,9 @@ if grep -q "#Preview" "$SWIFT_FILE" 2>/dev/null; then
     fi
 
     if [[ -n "$PROJECT" ]]; then
-        exec "$SCRIPT_DIR/preview-dynamic.sh" \
-            "$SWIFT_FILE" \
+        ensure_preview_tool
+        exec "$PREVIEW_TOOL" preview \
+            --file "$SWIFT_FILE" \
             --project "$PROJECT" \
             ${TARGET:+--target "$TARGET"} \
             --simulator "$SIMULATOR" \

@@ -30,49 +30,46 @@ This will automatically:
 
 ### Preview Modes
 
-#### Mode 1: Dynamic Preview Injection (Fastest - Recommended)
+The unified `preview` script auto-detects the best mode. You can also be explicit:
 
-For files with `#Preview` in an Xcode project, this injects a minimal PreviewHost target:
+#### Xcode Project with #Preview (Fastest)
+
+Injects a minimal PreviewHost target, builds only required modules (~3-4 seconds):
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview-dynamic.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview \
   "<path-to-file.swift>" \
   --project "<path.xcodeproj>" \
   --output /tmp/preview.png
 ```
 
-**Advantages:**
-- Builds only the required modules (3-4 seconds vs minutes)
-- Works with static modules/libraries
-- Automatically includes resource bundles (Tuist and standard naming)
-- No pre-existing preview scheme required
+#### SPM Package
 
-#### Mode 2: SPM Package
-
-For files in Swift Package Manager packages:
+Auto-detected from Package.swift in parent directories:
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview-spm.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview \
   "<path-to-file.swift>" \
   --output /tmp/preview.png
 ```
 
-#### Mode 3: Standalone Swift File (No Dependencies)
+#### Standalone Swift File (No Dependencies)
 
 For Swift files that only use system frameworks (SwiftUI, UIKit, Foundation):
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview-minimal.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview \
   "<path-to-file.swift>" \
   --output /tmp/preview.png
 ```
 
-#### Mode 4: Capture Current Simulator
+#### Capture Current Simulator
 
 Just screenshot whatever is currently on screen:
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/capture-simulator.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview \
+  --capture \
   --output /tmp/preview.png
 ```
 
@@ -96,7 +93,7 @@ Read /tmp/preview.png
 ```
 User: /preview ~/MyApp/Modules/Components/Button.swift
 → Auto-detects MyApp.xcodeproj
-→ Uses preview-dynamic.sh for fast build (~3 seconds)
+→ Injects PreviewHost target for fast build (~3 seconds)
 → Capture screenshot showing Button component
 → Analyze visual output
 ```
@@ -105,7 +102,7 @@ User: /preview ~/MyApp/Modules/Components/Button.swift
 ```
 User: /preview ~/MyPackage/Sources/UI/Card.swift
 → Detects Package.swift
-→ Uses preview-spm.sh
+→ Creates temporary Xcode project with SPM dependency
 → Capture screenshot
 → Analyze visual output
 ```
@@ -114,7 +111,7 @@ User: /preview ~/MyPackage/Sources/UI/Card.swift
 ```
 User: /preview MyView.swift
 → Detects system-only imports
-→ Use preview-minimal.sh to build minimal host
+→ Builds minimal host app
 → Capture screenshot
 → Analyze visual output
 ```

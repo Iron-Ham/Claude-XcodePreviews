@@ -10,11 +10,7 @@ Use this skill to build SwiftUI previews and inspect screenshots.
 ## Prerequisites
 
 - Xcode + iOS Simulator installed
-- Ruby gem dependency:
-
-```bash
-gem install xcodeproj --user-install
-```
+- Swift toolchain (preview-tool auto-builds on first run)
 - `PREVIEW_BUILD_PATH` set to this repository root
   - Example: `export PREVIEW_BUILD_PATH=/absolute/path/to/XcodePreviews`
 

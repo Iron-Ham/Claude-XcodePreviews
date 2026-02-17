@@ -25,8 +25,8 @@ A toolkit for building and capturing SwiftUI previews for visual analysis.
 | Project Type | Approach | Build Time | Script |
 |--------------|----------|------------|--------|
 | **Standalone Swift** | Minimal host app | ~5 seconds | `preview-minimal.sh` |
-| **Xcode project** | Dynamic target injection | ~3-4 seconds | `preview-dynamic.sh` |
-| **SPM package** | Temporary project creation | ~20 seconds | `preview-spm.sh` |
+| **Xcode project** | Dynamic target injection | ~3-4 seconds | `preview-tool` |
+| **SPM package** | Temporary project creation | ~20 seconds | `preview-tool` |
 
 ### Dynamic Preview Injection
 
@@ -41,17 +41,16 @@ For Xcode projects, the toolkit:
 
 This is much faster than building a full app scheme.
 
-## Scripts
+## Scripts & Tools
 
-| Script | Purpose |
-|--------|---------|
-| `preview` | Unified entry point - auto-detects best approach |
-| `preview-dynamic.sh` | Dynamic target injection for Xcode projects |
-| `preview-spm.sh` | Preview from SPM packages |
-| `preview-minimal.sh` | Build standalone Swift files |
-| `xcode-preview.sh` | Build full Xcode project schemes |
-| `capture-simulator.sh` | Screenshot current simulator |
-| `sim-manager.sh` | Simulator management |
+| Path | Purpose |
+|------|---------|
+| `scripts/preview` | Unified entry point - auto-detects best approach |
+| `scripts/preview-minimal.sh` | Build standalone Swift files |
+| `scripts/xcode-preview.sh` | Build full Xcode project schemes |
+| `scripts/capture-simulator.sh` | Screenshot current simulator |
+| `scripts/sim-manager.sh` | Simulator management |
+| `tools/preview-tool` | Swift CLI for dynamic preview injection, SPM preview, dependency resolution |
 
 ## Usage Examples
 
@@ -87,10 +86,7 @@ This is much faster than building a full app scheme.
 
 - macOS with Xcode installed
 - iOS Simulator
-- Ruby with `xcodeproj` gem:
-  ```bash
-  gem install xcodeproj --user-install
-  ```
+- Swift toolchain (preview-tool auto-builds on first run)
 
 ## Workflow for Claude
 

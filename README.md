@@ -14,15 +14,9 @@ A CLI toolset for building and capturing SwiftUI previews programmatically. Desi
 
 - macOS with Xcode installed
 - iOS Simulator
-- Ruby (comes with macOS) with `xcodeproj` gem
+- Swift toolchain (preview-tool auto-builds on first run)
 
 ## Installation
-
-### Prerequisites
-
-```bash
-gem install xcodeproj --user-install
-```
 
 ### Claude Code: Plugin Marketplace (Recommended)
 
@@ -110,16 +104,6 @@ The `preview` script auto-detects the best approach:
 
 ### Direct Scripts
 
-**For Xcode projects with `#Preview` blocks:**
-```bash
-./scripts/preview-dynamic.sh MyView.swift --project MyApp.xcodeproj
-```
-
-**For SPM packages:**
-```bash
-./scripts/preview-spm.sh MyView.swift --package /path/to/Package.swift
-```
-
 **For standalone Swift files (system imports only):**
 ```bash
 ./scripts/preview-minimal.sh MyView.swift
@@ -201,16 +185,15 @@ Ask Codex to preview a SwiftUI file. The skill instructs Codex to:
 2. Capture `/tmp/preview*.png`
 3. Read the screenshot and provide UI analysis
 
-## Scripts
+## Scripts & Tools
 
-| Script | Purpose |
-|--------|---------|
-| `preview` | Unified entry point |
-| `preview-dynamic.sh` | Xcode project preview injection |
-| `preview-spm.sh` | SPM package preview |
-| `preview-minimal.sh` | Standalone files |
-| `capture-simulator.sh` | Screenshot capture |
-| `sim-manager.sh` | Simulator utilities |
+| Path | Purpose |
+|------|---------|
+| `scripts/preview` | Unified entry point (auto-detects best approach) |
+| `scripts/preview-minimal.sh` | Standalone files (system imports only) |
+| `scripts/capture-simulator.sh` | Screenshot capture |
+| `scripts/sim-manager.sh` | Simulator utilities |
+| `tools/preview-tool` | Swift CLI for dynamic preview injection + SPM preview |
 
 ## Project Structure
 
@@ -238,11 +221,14 @@ XcodePreviews/
 │       └── SKILL.md                # Claude Code plugin skill
 ├── scripts/
 │   ├── preview                     # Unified entry point
-│   ├── preview-dynamic.sh          # Xcode project injection
-│   ├── preview-spm.sh              # SPM package preview
 │   ├── preview-minimal.sh          # Standalone files
 │   ├── capture-simulator.sh
 │   └── sim-manager.sh
+├── tools/
+│   └── preview-tool/               # Swift CLI (auto-built on first run)
+│       ├── Package.swift
+│       ├── Sources/
+│       └── Tests/
 └── templates/
 ```
 

@@ -32,12 +32,12 @@ Auto-detects project type and uses the best approach:
   --output /tmp/preview-capture.png
 ```
 
-### Dynamic Preview Injection (Xcode Projects)
+### Xcode Project with #Preview
 
-Fast builds by injecting a minimal PreviewHost target:
+Fast builds by injecting a minimal PreviewHost target (handled automatically by the unified script):
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview-dynamic.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview \
   <path-to-file.swift> \
   --project <path.xcodeproj> \
   --output /tmp/preview.png
@@ -45,8 +45,10 @@ Fast builds by injecting a minimal PreviewHost target:
 
 ### SPM Package Preview
 
+Auto-detected from Package.swift in parent directories:
+
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview-spm.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview \
   <path-to-file.swift> \
   --output /tmp/preview.png
 ```
@@ -56,7 +58,7 @@ Fast builds by injecting a minimal PreviewHost target:
 Build a standalone Swift file with system frameworks only:
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview-minimal.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview \
   <path-to-file.swift> \
   --output /tmp/preview.png
 ```
