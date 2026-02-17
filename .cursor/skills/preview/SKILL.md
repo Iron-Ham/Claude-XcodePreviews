@@ -9,7 +9,9 @@ Build SwiftUI views and capture screenshots of their rendered output for visual 
 
 ## Installation Path
 
-Scripts are located at `${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}/scripts/`
+Scripts are located at `${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}/scripts/`
+
+> **Compatibility:** If `~/XcodePreviews` doesn't exist, fall back to `~/Claude-XcodePreviews` (legacy name). The `PREVIEW_BUILD_PATH` environment variable overrides both.
 
 ## Available Commands
 
@@ -18,7 +20,7 @@ Scripts are located at `${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}/script
 Auto-detects project type and uses the best approach:
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview \
   <path-to-file.swift> \
   --output /tmp/preview.png
 ```
@@ -26,7 +28,7 @@ Auto-detects project type and uses the best approach:
 ### Quick Capture (Current Simulator)
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/capture-simulator.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/capture-simulator.sh \
   --output /tmp/preview-capture.png
 ```
 
@@ -35,7 +37,7 @@ Auto-detects project type and uses the best approach:
 Fast builds by injecting a minimal PreviewHost target:
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview-dynamic.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview-dynamic.sh \
   <path-to-file.swift> \
   --project <path.xcodeproj> \
   --output /tmp/preview.png
@@ -44,7 +46,7 @@ Fast builds by injecting a minimal PreviewHost target:
 ### SPM Package Preview
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview-spm.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview-spm.sh \
   <path-to-file.swift> \
   --output /tmp/preview.png
 ```
@@ -54,7 +56,7 @@ Fast builds by injecting a minimal PreviewHost target:
 Build a standalone Swift file with system frameworks only:
 
 ```bash
-"${PREVIEW_BUILD_PATH:-$HOME/Claude-XcodePreviews}"/scripts/preview-minimal.sh \
+"${PREVIEW_BUILD_PATH:-$HOME/XcodePreviews}"/scripts/preview-minimal.sh \
   <path-to-file.swift> \
   --output /tmp/preview.png
 ```
