@@ -196,13 +196,17 @@ log_info "Injecting PreviewHost target..."
 
 export PROJECT_PATH TARGET PREVIEW_DIR IMPORTS
 
+export SWIFT_FILE_ABS="$SWIFT_FILE"
+
 ruby << 'RUBY_SCRIPT'
 require 'xcodeproj'
+require 'set'
 
 project_path = ENV['PROJECT_PATH']
 target_name = ENV['TARGET']
 preview_dir = ENV['PREVIEW_DIR']
 imports = ENV['IMPORTS'].to_s.split
+swift_file = ENV['SWIFT_FILE_ABS']
 
 project = Xcodeproj::Project.open(project_path)
 
@@ -210,7 +214,7 @@ project = Xcodeproj::Project.open(project_path)
 existing = project.targets.find { |t| t.name == 'PreviewHost' }
 if existing
   puts "Removing existing PreviewHost..."
-  # Remove the group too
+  # Remove the file group too, not just the target
   project.main_group.groups.each do |g|
     if g.name == 'PreviewHost'
       g.remove_from_project
@@ -220,14 +224,46 @@ if existing
   existing.remove_from_project
 end
 
-# Find dependency targets for all imports
+# ---------------------------------------------------------------
+# Detect which app target the Swift file belongs to
+# ---------------------------------------------------------------
+app_target = nil
+project.targets.each do |t|
+  next unless t.product_type == 'com.apple.product-type.application'
+  t.source_build_phase.files_references.each do |ref|
+    next unless ref.respond_to?(:real_path)
+    if ref.real_path.to_s == swift_file
+      app_target = t
+      break
+    end
+  end
+  break if app_target
+end
+
+# Fallback: match by directory convention (e.g., AnyClaw/Features/...)
+if app_target.nil?
+  project_dir = File.dirname(project_path)
+  relative = swift_file.sub("#{project_dir}/", '')
+  first_dir = relative.split('/').first
+
+  app_target = project.targets.find do |t|
+    t.product_type == 'com.apple.product-type.application' && t.name == first_dir
+  end
+end
+
+if app_target
+  puts "Detected app target: #{app_target.name}"
+end
+
+# ---------------------------------------------------------------
+# Find framework/library dependency targets for imports
+# ---------------------------------------------------------------
 dep_targets = []
 imports.each do |imp|
   target = project.targets.find { |t| t.name == imp }
   dep_targets << target if target
 end
 
-# Also add the main target if specified
 if target_name && !dep_targets.any? { |t| t.name == target_name }
   main_target = project.targets.find { |t| t.name == target_name }
   dep_targets << main_target if main_target
@@ -235,9 +271,10 @@ end
 
 puts "Dependencies: #{dep_targets.map(&:name).join(', ')}"
 
-# Get deployment target from first dependency
+# Get deployment target from first dependency or app target
 deployment_target = '17.0'
-dep_targets.first&.build_configurations&.each do |config|
+ref_target = dep_targets.first || app_target
+ref_target&.build_configurations&.each do |config|
   if dt = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
     deployment_target = dt
     break
@@ -245,12 +282,14 @@ dep_targets.first&.build_configurations&.each do |config|
 end
 puts "Deployment target: iOS #{deployment_target}"
 
+# ---------------------------------------------------------------
 # Create PreviewHost target
+# ---------------------------------------------------------------
 puts "Creating PreviewHost target..."
 preview_target = project.new_target(:application, 'PreviewHost', :ios, deployment_target)
 
-# Configure build settings
 preview_target.build_configurations.each do |config|
+  config.build_settings['PRODUCT_NAME'] = 'PreviewHost'
   config.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = 'com.preview.host'
   config.build_settings['GENERATE_INFOPLIST_FILE'] = 'YES'
   config.build_settings['INFOPLIST_KEY_UIApplicationSceneManifest_Generation'] = 'YES'
@@ -258,9 +297,12 @@ preview_target.build_configurations.each do |config|
   config.build_settings['SWIFT_VERSION'] = '5.0'
   config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
   config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = deployment_target
+  config.build_settings['LD_RUNPATH_SEARCH_PATHS'] = ['$(inherited)', '@executable_path/Frameworks']
 end
 
-# Add source files
+# ---------------------------------------------------------------
+# Add PreviewHost source files
+# ---------------------------------------------------------------
 preview_group = project.main_group.new_group('PreviewHost', preview_dir)
 Dir.glob(File.join(preview_dir, '*.swift')).each do |f|
   ref = preview_group.new_file(f)
@@ -268,47 +310,134 @@ Dir.glob(File.join(preview_dir, '*.swift')).each do |f|
   puts "  Added source: #{File.basename(f)}"
 end
 
-# Add dependencies - this is the key part!
-# For static modules, we need BOTH target dependency AND to link the products
+# ---------------------------------------------------------------
+# When the Swift file lives in the app target (not a separately
+# importable module), add it directly so its types are available
+# to the generated PreviewHostApp.swift.
+#
+# We intentionally only include this one file rather than every
+# source in the app target — bulk-inclusion would balloon compile
+# times and likely introduce unrelated build errors.  If the view
+# references sibling types that aren't in a module, users should
+# either extract shared types into a module or add the missing
+# files to PreviewHost manually via --keep and Xcode.
+# ---------------------------------------------------------------
+is_app_target_file = app_target &&
+  (target_name.nil? || target_name.empty? || target_name == app_target.name)
+
+if is_app_target_file
+  file_ref = project.new_file(swift_file)
+  preview_target.source_build_phase.add_file_reference(file_ref)
+  puts "  Added app-target source: #{File.basename(swift_file)}"
+  STDERR.puts "NOTE: #{File.basename(swift_file)} belongs to app target '#{app_target.name}', not a separate module."
+  STDERR.puts "      Only this file is included — sibling types from the app target won't be available."
+end
+
+# ---------------------------------------------------------------
+# Add target dependencies + link/embed products
+# ---------------------------------------------------------------
+# For each dependency we need TWO things:
+#   1. A target dependency (ensures correct build order)
+#   2. Linking/embedding of the product:
+#      - Static libraries  → link into the binary
+#      - Dynamic frameworks → link AND embed (copy into .app/Frameworks)
+#
+# Without the "Embed Frameworks" phase, dynamic frameworks would
+# link at build time but crash at launch with "image not found".
+embed_phase = project.new(Xcodeproj::Project::Object::PBXCopyFilesBuildPhase)
+embed_phase.name = 'Embed Frameworks'
+embed_phase.symbol_dst_subfolder_spec = :frameworks
+preview_target.build_phases << embed_phase
+
 dep_targets.each do |dep|
-  # Add target dependency (ensures build order)
+  # 1. Target dependency — ensures this module builds before PreviewHost
   preview_target.add_dependency(dep)
   puts "  Added dependency: #{dep.name}"
 
-  # For static libraries, we also need to link
+  # 2. Link (and embed, for frameworks) the built product
   if dep.product_type == 'com.apple.product-type.library.static'
     preview_target.frameworks_build_phase.add_file_reference(dep.product_reference)
     puts "  Linked static library: #{dep.name}"
+  elsif dep.product_type == 'com.apple.product-type.framework'
+    build_file = embed_phase.add_file_reference(dep.product_reference)
+    build_file.settings = { 'ATTRIBUTES' => ['CodeSignOnCopy', 'RemoveHeadersOnCopy'] }
+    puts "  Embedded framework: #{dep.name}"
   end
 end
 
+# ---------------------------------------------------------------
+# Forward SPM package product dependencies
+# ---------------------------------------------------------------
+# Modules often depend on SPM packages (e.g. Firebase, Alamofire).
+# Those dependencies live on the original target as
+# XCSwiftPackageProductDependency objects pointing at a shared
+# XCRemoteSwiftPackageReference.  We create new dependency objects
+# for PreviewHost that reference the same package — this lets
+# Xcode resolve and link them without duplicating the package.
+# Deduplication by product_name prevents double-linking.
+all_pkg_deps = Set.new
+
+# 1. From framework/library dependency targets
+dep_targets.each do |dep|
+  dep.package_product_dependencies.each do |pkg_dep|
+    next if all_pkg_deps.include?(pkg_dep.product_name)
+    all_pkg_deps << pkg_dep.product_name
+
+    new_dep = project.new(Xcodeproj::Project::Object::XCSwiftPackageProductDependency)
+    new_dep.product_name = pkg_dep.product_name
+    new_dep.package = pkg_dep.package
+    preview_target.package_product_dependencies << new_dep
+  end
+end
+
+unless all_pkg_deps.empty?
+  puts "  Added #{all_pkg_deps.size} SPM package dependencies: #{all_pkg_deps.to_a.join(', ')}"
+end
+
+# 2. From the app target (may have packages not used by the modules)
+if app_target
+  app_target.package_product_dependencies.each do |pkg_dep|
+    next if all_pkg_deps.include?(pkg_dep.product_name)
+    all_pkg_deps << pkg_dep.product_name
+
+    new_dep = project.new(Xcodeproj::Project::Object::XCSwiftPackageProductDependency)
+    new_dep.product_name = pkg_dep.product_name
+    new_dep.package = pkg_dep.package
+    preview_target.package_product_dependencies << new_dep
+  end
+end
+
+# ---------------------------------------------------------------
 # Find and add resource bundle targets
-# Supports both Tuist (ProjectName_ModuleName) and generic naming conventions
+# ---------------------------------------------------------------
+# Many modules ship a companion .bundle target for assets, colors,
+# localisations, etc.  Naming conventions vary:
+#   - Tuist:    ProjectName_ModuleName
+#   - Generic:  ModuleName_Resources / ModuleNameResources
+#   - Direct:   ModuleName (when the bundle IS the target)
+#
+# We walk the full transitive dependency graph so nested module
+# resources are also picked up.
 project_name = File.basename(project_path, '.xcodeproj')
 bundle_targets = []
 all_dep_names = Set.new
 
-# Collect all dependency names recursively using a queue (avoid def in heredoc)
+# Collect all dependency names recursively (BFS to avoid recursion
+# inside a heredoc where `def` is unavailable)
 queue = dep_targets.dup
 while !queue.empty?
   t = queue.shift
   next if t.nil?
   next if all_dep_names.include?(t.name)
   all_dep_names << t.name
-
   t.dependencies.each do |dep_ref|
     queue << dep_ref.target if dep_ref.target
   end
 end
 
-# Find bundle targets that match any dependency
+# Match bundle targets against known naming patterns
 project.targets.each do |t|
   next unless t.product_type == 'com.apple.product-type.bundle'
-
-  # Check various naming conventions:
-  # 1. Tuist: ProjectName_ModuleName
-  # 2. Generic: ModuleName_Resources, ModuleNameResources
-  # 3. Direct match to dependency
   all_dep_names.each do |dep_name|
     patterns = [
       "#{project_name}_#{dep_name}",  # Tuist convention
@@ -316,7 +445,6 @@ project.targets.each do |t|
       "#{dep_name}Resources",          # Generic Resources suffix
       dep_name                         # Direct match
     ]
-
     if patterns.any? { |p| t.name == p }
       bundle_targets << t unless bundle_targets.include?(t)
       break
@@ -324,16 +452,12 @@ project.targets.each do |t|
   end
 end
 
-# Add bundle targets as dependencies and copy them into the app
+# Add bundles as dependencies and copy their products into the app
 if !bundle_targets.empty?
   puts "Resource bundles: #{bundle_targets.map(&:name).join(', ')}"
-
-  # Get the resources build phase
   copy_phase = preview_target.build_phases.find { |p| p.is_a?(Xcodeproj::Project::Object::PBXResourcesBuildPhase) }
-
   bundle_targets.each do |bundle|
     preview_target.add_dependency(bundle)
-    # Add bundle product to resources
     if bundle.product_reference && copy_phase
       copy_phase.add_file_reference(bundle.product_reference)
       puts "  Copying bundle: #{bundle.name}"

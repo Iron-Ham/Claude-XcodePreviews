@@ -12,17 +12,27 @@ def find_simulator(name)
   json = `xcrun simctl list devices available -j 2>/dev/null`
   data = JSON.parse(json)
 
+  # Collect all matching devices with their runtime version
+  candidates = []
   data['devices'].each do |runtime, devices|
     next unless runtime.include?('iOS')
+    # Extract version number (e.g., "com.apple.CoreSimulator.SimRuntime.iOS-26-2" -> [26, 2])
+    version_parts = runtime.scan(/(\d+)/).flatten.map(&:to_i)
     devices.each do |device|
       if device['name'] == name && device['isAvailable']
-        puts device['udid']
-        exit 0
+        candidates << { udid: device['udid'], version: version_parts }
       end
     end
   end
 
-  exit 1
+  if candidates.empty?
+    exit 1
+  end
+
+  # Sort by version descending (latest runtime first) and pick the first
+  best = candidates.sort_by { |c| c[:version] }.last
+  puts best[:udid]
+  exit 0
 end
 
 def simulator_state(udid)
