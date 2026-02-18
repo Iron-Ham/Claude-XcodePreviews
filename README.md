@@ -195,43 +195,6 @@ Ask Codex to preview a SwiftUI file. The skill instructs Codex to:
 | `scripts/sim-manager.sh` | Simulator utilities |
 | `tools/preview-tool` | Swift CLI for dynamic preview injection + SPM preview |
 
-## Project Structure
-
-```
-XcodePreviews/
-├── .claude/                        # Claude Code integration
-│   ├── commands/
-│   │   └── preview.md              #   Slash command
-│   └── settings.json               #   Project permissions
-├── .claude-plugin/                 # Claude Code plugin marketplace
-│   ├── marketplace.json
-│   └── plugin.json
-├── .codex/                         # Codex integration
-│   └── skills/
-│       └── xcode-preview-capture/
-│           └── SKILL.md            #   Codex skill definition
-├── .cursor/                        # Cursor integration
-│   ├── rules/
-│   │   └── preview.mdc             #   Workspace rule
-│   └── skills/
-│       └── preview/
-│           └── SKILL.md            #   Cursor skill definition
-├── skills/
-│   └── preview/
-│       └── SKILL.md                # Claude Code plugin skill
-├── scripts/
-│   ├── preview                     # Unified entry point
-│   ├── preview-minimal.sh          # Standalone files
-│   ├── capture-simulator.sh
-│   └── sim-manager.sh
-├── tools/
-│   └── preview-tool/               # Swift CLI (auto-built on first run)
-│       ├── Package.swift
-│       ├── Sources/
-│       └── Tests/
-└── templates/
-```
-
 ## License
 
 MIT
