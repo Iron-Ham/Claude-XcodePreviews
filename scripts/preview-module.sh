@@ -30,7 +30,7 @@
 #   # Single-app target
 #   preview-module.sh ContentView.swift --project MyApp.xcodeproj --target MyApp
 
-set -e
+set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="/tmp/preview-module-$$"
@@ -251,6 +251,15 @@ SWIFTEOF
             -destination "platform=iOS Simulator,id=$SIM_UDID" \
             -derivedDataPath "$BUILD_DIR/DerivedData" \
             ${VERBOSE:+-quiet} 2>&1 | while read line; do log_verbose "$line"; done
+
+        BUILD_EXIT=${PIPESTATUS[0]}
+        if [[ $BUILD_EXIT -ne 0 ]]; then
+            log_error "Failed to build preview host from package"
+            if [[ "$KEEP" != "true" ]]; then
+                log_info "Use --keep to preserve build artifacts for debugging"
+            fi
+            exit 1
+        fi
     else
         log_error "Failed to generate Xcode project from package"
         exit 1

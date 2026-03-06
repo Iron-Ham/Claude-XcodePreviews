@@ -21,7 +21,7 @@
 #   preview-build.sh ContentView.swift "Dark Mode Preview" --simulator "iPhone 15"
 #   preview-build.sh MyView.swift --project ./MyApp.xcodeproj --scheme MyApp
 
-set -e
+set -eo pipefail
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
