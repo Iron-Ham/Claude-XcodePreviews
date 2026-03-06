@@ -180,6 +180,64 @@ for script in preview preview-build.sh preview-minimal.sh preview-module.sh \
 done
 
 #=============================================================================
+# Test: preview-tool respects explicit --project over workspace discovery (#25)
+#=============================================================================
+section "preview-tool --project precedence"
+
+MAIN_SWIFT="$PROJECT_DIR/tools/preview-tool/Sources/CLI/main.swift"
+if grep -q 'if let project = args.project' "$MAIN_SWIFT"; then
+    pass "preview-tool checks explicit --project first"
+else
+    fail "preview-tool does not prioritize explicit --project"
+fi
+
+# Verify the old pattern (workspace-first) is gone
+if grep -q 'if let workspace = args.workspace' "$MAIN_SWIFT" && \
+   ! grep -B2 'if let workspace = args.workspace' "$MAIN_SWIFT" | grep -q 'else'; then
+    fail "preview-tool still prioritizes workspace over explicit project"
+else
+    pass "preview-tool correctly falls back to workspace discovery"
+fi
+
+#=============================================================================
+# Test: PreviewHost directory uses PID-isolated path (#26)
+#=============================================================================
+section "PID-isolated PreviewHost directory"
+
+if grep -q 'preview-host-.*processIdentifier' "$MAIN_SWIFT"; then
+    pass "PreviewHost directory uses PID-isolated path"
+else
+    fail "PreviewHost directory uses fixed project-relative path"
+fi
+
+# Ensure the old fixed "PreviewHost" path is not used for the project-relative directory
+# (the SPM path uses PreviewHost inside a temp dir which is safe)
+if grep -q 'projectDir.*appendingPathComponent("PreviewHost")' "$MAIN_SWIFT"; then
+    fail "Fixed 'PreviewHost' path still used for project-relative directory"
+else
+    pass "No fixed project-relative 'PreviewHost' directory path"
+fi
+
+#=============================================================================
+# Test: ImportCollector extracts only module name, not declaration path (#27)
+#=============================================================================
+section "ImportCollector module name extraction"
+
+EXTRACTOR="$PROJECT_DIR/tools/preview-tool/Sources/PreviewExtractor.swift"
+# Should use node.path.first, not join all components
+if grep -q 'node.path.first' "$EXTRACTOR"; then
+    pass "ImportCollector uses first path component only"
+else
+    fail "ImportCollector joins all path components"
+fi
+
+if grep -q 'joined(separator: "\.")' "$EXTRACTOR"; then
+    fail "ImportCollector still joins path components with dot"
+else
+    pass "No dot-joined import path construction"
+fi
+
+#=============================================================================
 # Summary
 #=============================================================================
 echo ""
