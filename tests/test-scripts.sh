@@ -238,6 +238,42 @@ else
 fi
 
 #=============================================================================
+# Test: preview script does not use exec for dynamic injection (#30)
+#=============================================================================
+section "preview script dynamic injection fallback"
+
+# The preview-tool preview invocation should NOT use exec (so fallback works)
+PREVIEW_SCRIPT="$PROJECT_DIR/scripts/preview"
+# Find the dynamic injection block - it should use 'if "$PREVIEW_TOOL"' not 'exec "$PREVIEW_TOOL" preview'
+if grep -q 'exec.*\$PREVIEW_TOOL.*preview[^-]' "$PREVIEW_SCRIPT"; then
+    fail "preview script still uses exec for dynamic injection (blocks fallback)"
+else
+    pass "preview script does not use exec for dynamic injection"
+fi
+
+# Should have a fallback warning message
+if grep -q 'falling back to scheme build' "$PREVIEW_SCRIPT"; then
+    pass "preview script has fallback warning on injection failure"
+else
+    fail "preview script missing fallback warning"
+fi
+
+#=============================================================================
+# Test: preview script discovers project context before standalone check (#31)
+#=============================================================================
+section "preview script project discovery ordering"
+
+# The parent-directory search (Package.swift) must appear BEFORE the SYSTEM_ONLY check
+SEARCH_LINE=$(grep -n 'Package.swift' "$PREVIEW_SCRIPT" | head -1 | cut -d: -f1)
+SYSTEM_LINE=$(grep -n 'SYSTEM_ONLY.*true.*PROJECT.*WORKSPACE' "$PREVIEW_SCRIPT" | head -1 | cut -d: -f1)
+
+if [[ -n "$SEARCH_LINE" && -n "$SYSTEM_LINE" && "$SEARCH_LINE" -lt "$SYSTEM_LINE" ]]; then
+    pass "Package.swift search (line $SEARCH_LINE) runs before standalone check (line $SYSTEM_LINE)"
+else
+    fail "Standalone check runs before Package.swift search (search=$SEARCH_LINE, system=$SYSTEM_LINE)"
+fi
+
+#=============================================================================
 # Summary
 #=============================================================================
 echo ""

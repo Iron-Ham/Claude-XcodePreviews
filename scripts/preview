@@ -165,57 +165,28 @@ FILENAME=$(basename "$SWIFT_FILE" .swift)
 
 log_info "Preview target: $FILENAME"
 
-# Analyze imports
-IMPORTS=$(grep "^import " "$SWIFT_FILE" | sed 's/import //' | sort -u)
-SYSTEM_ONLY="true"
-
-for imp in $IMPORTS; do
-    case $imp in
-        SwiftUI|UIKit|Foundation|Combine|CoreGraphics|CoreAnimation|QuartzCore|AVFoundation|MapKit|CoreLocation|CoreData|CloudKit|StoreKit|GameKit|SpriteKit|SceneKit|ARKit|RealityKit|Metal|MetalKit|Vision|CoreML|NaturalLanguage|Speech|Intents|UserNotifications|WidgetKit|AppIntents|Charts|Swift|os|Darwin|Dispatch|ObjectiveC|Accelerate|simd|Security|CryptoKit|LocalAuthentication|AuthenticationServices|SafariServices|WebKit|PhotosUI|Photos|Contacts|ContactsUI|EventKit|EventKitUI|Messages|MessageUI|HealthKit|CoreMotion|CoreBluetooth|MultipeerConnectivity|Network|NetworkExtension|CallKit|PushKit|CoreTelephony|SystemConfiguration|MobileCoreServices|UniformTypeIdentifiers|LinkPresentation|QuickLook|QuickLookThumbnailing)
-            # System framework
-            ;;
-        *)
-            SYSTEM_ONLY="false"
-            ;;
-    esac
-done
-
 #-----------------------------------------------------------------------------
-# Standalone Swift file (system imports only)
-#-----------------------------------------------------------------------------
-if [[ "$SYSTEM_ONLY" == "true" && -z "$PROJECT" && -z "$WORKSPACE" ]]; then
-    log_info "Building as standalone file (system frameworks only)"
-    exec "$SCRIPT_DIR/preview-minimal.sh" \
-        "$SWIFT_FILE" \
-        --simulator "$SIMULATOR" \
-        --output "$OUTPUT" \
-        ${VERBOSE:+--verbose}
-fi
-
-#-----------------------------------------------------------------------------
-# File with project context - check for SPM package first
+# Discover project context (Package.swift / .xcworkspace / .xcodeproj)
+# Must run before the standalone check so SPM files with system-only imports
+# are not misclassified as standalone. (fixes #31)
 #-----------------------------------------------------------------------------
 if [[ -z "$PROJECT" && -z "$WORKSPACE" ]]; then
-    # Try to find project/workspace/package in parent directories
     DIR=$(dirname "$SWIFT_FILE")
     PACKAGE_SWIFT=""
 
     while [[ "$DIR" != "/" ]]; do
-        # Check for Package.swift (SPM package)
         if [[ -f "$DIR/Package.swift" ]]; then
             PACKAGE_SWIFT="$DIR/Package.swift"
             log_info "Found SPM package: $PACKAGE_SWIFT"
             break
         fi
-        # Look for workspace (exclude internal xcworkspace dirs)
-        FOUND_WS=$(find "$DIR" -maxdepth 1 -name "*.xcworkspace" -type d 2>/dev/null | grep -v ".xcodeproj" | head -1)
+        FOUND_WS=$(find "$DIR" -maxdepth 1 -name "*.xcworkspace" -type d 2>/dev/null | grep -v ".xcodeproj" | head -1 || true)
         if [[ -n "$FOUND_WS" ]]; then
             WORKSPACE="$FOUND_WS"
             log_info "Found workspace: $WORKSPACE"
             break
         fi
-        # Then look for project
-        FOUND_PROJ=$(find "$DIR" -maxdepth 1 -name "*.xcodeproj" -type d 2>/dev/null | head -1)
+        FOUND_PROJ=$(find "$DIR" -maxdepth 1 -name "*.xcodeproj" -type d 2>/dev/null | head -1 || true)
         if [[ -n "$FOUND_PROJ" ]]; then
             PROJECT="$FOUND_PROJ"
             log_info "Found project: $PROJECT"
@@ -237,16 +208,44 @@ if [[ -z "$PROJECT" && -z "$WORKSPACE" ]]; then
             ${KEEP:+--keep} \
             ${VERBOSE:+--verbose}
     fi
+fi
 
-    if [[ -z "$PROJECT" && -z "$WORKSPACE" ]]; then
-        log_warning "File uses non-system imports but no project found: $IMPORTS"
-        log_info "Attempting standalone build anyway..."
-        exec "$SCRIPT_DIR/preview-minimal.sh" \
-            "$SWIFT_FILE" \
-            --simulator "$SIMULATOR" \
-            --output "$OUTPUT" \
-            ${VERBOSE:+--verbose}
-    fi
+# Analyze imports
+IMPORTS=$(grep "^import " "$SWIFT_FILE" | sed 's/import //' | sort -u)
+SYSTEM_ONLY="true"
+
+for imp in $IMPORTS; do
+    case $imp in
+        SwiftUI|UIKit|Foundation|Combine|CoreGraphics|CoreAnimation|QuartzCore|AVFoundation|MapKit|CoreLocation|CoreData|CloudKit|StoreKit|GameKit|SpriteKit|SceneKit|ARKit|RealityKit|Metal|MetalKit|Vision|CoreML|NaturalLanguage|Speech|Intents|UserNotifications|WidgetKit|AppIntents|Charts|Swift|os|Darwin|Dispatch|ObjectiveC|Accelerate|simd|Security|CryptoKit|LocalAuthentication|AuthenticationServices|SafariServices|WebKit|PhotosUI|Photos|Contacts|ContactsUI|EventKit|EventKitUI|Messages|MessageUI|HealthKit|CoreMotion|CoreBluetooth|MultipeerConnectivity|Network|NetworkExtension|CallKit|PushKit|CoreTelephony|SystemConfiguration|MobileCoreServices|UniformTypeIdentifiers|LinkPresentation|QuickLook|QuickLookThumbnailing)
+            # System framework
+            ;;
+        *)
+            SYSTEM_ONLY="false"
+            ;;
+    esac
+done
+
+#-----------------------------------------------------------------------------
+# Standalone Swift file (system imports only, no project context found)
+#-----------------------------------------------------------------------------
+if [[ "$SYSTEM_ONLY" == "true" && -z "$PROJECT" && -z "$WORKSPACE" ]]; then
+    log_info "Building as standalone file (system frameworks only)"
+    exec "$SCRIPT_DIR/preview-minimal.sh" \
+        "$SWIFT_FILE" \
+        --simulator "$SIMULATOR" \
+        --output "$OUTPUT" \
+        ${VERBOSE:+--verbose}
+fi
+
+# If we have non-system imports but no project context, try standalone anyway
+if [[ -z "$PROJECT" && -z "$WORKSPACE" ]]; then
+    log_warning "File uses non-system imports but no project found: $IMPORTS"
+    log_info "Attempting standalone build anyway..."
+    exec "$SCRIPT_DIR/preview-minimal.sh" \
+        "$SWIFT_FILE" \
+        --simulator "$SIMULATOR" \
+        --output "$OUTPUT" \
+        ${VERBOSE:+--verbose}
 fi
 
 # Check if file has a #Preview block - if so, use dynamic preview injection
@@ -262,14 +261,19 @@ if grep -q "#Preview" "$SWIFT_FILE" 2>/dev/null; then
 
     if [[ -n "$PROJECT" ]]; then
         ensure_preview_tool
-        exec "$PREVIEW_TOOL" preview \
+        # Run without exec so the scheme-build fallback below is reachable
+        # if the dynamic injector fails. (fixes #30)
+        if "$PREVIEW_TOOL" preview \
             --file "$SWIFT_FILE" \
             --project "$PROJECT" \
             ${WORKSPACE:+--workspace "$WORKSPACE"} \
             ${TARGET:+--target "$TARGET"} \
             --simulator "$SIMULATOR" \
             --output "$OUTPUT" \
-            ${VERBOSE:+--verbose}
+            ${VERBOSE:+--verbose}; then
+            exit 0
+        fi
+        log_warning "Dynamic preview injection failed, falling back to scheme build..."
     fi
 fi
 
