@@ -145,8 +145,11 @@ private final class ImportCollector: SyntaxVisitor {
   var imports = [String]()
 
   override func visit(_ node: ImportDeclSyntax) -> SyntaxVisitorContinueKind {
-    let module = node.path.map(\.name.text).joined(separator: ".")
-    imports.append(module)
+    // Use only the first path component (the module name).
+    // e.g., `import enum AppFeature.GmailFilter` → "AppFeature"
+    if let module = node.path.first?.name.text {
+      imports.append(module)
+    }
     return .skipChildren
   }
 }

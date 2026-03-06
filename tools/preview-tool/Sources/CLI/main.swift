@@ -266,9 +266,11 @@ func runPreview(_ args: PreviewArgs) {
   let filename = (swiftFile as NSString).lastPathComponent
     .replacingOccurrences(of: ".swift", with: "")
 
-  // Find project path
+  // Find project path — prefer explicit --project, fall back to workspace discovery
   let projectPath: String
-  if let workspace = args.workspace {
+  if let project = args.project {
+    projectPath = resolveAbsolutePath(project)
+  } else if let workspace = args.workspace {
     let wsDir = (workspace as NSString).deletingLastPathComponent
     if let found = findFirstXcodeproj(in: wsDir) {
       projectPath = found
@@ -277,7 +279,8 @@ func runPreview(_ args: PreviewArgs) {
       exit(1)
     }
   } else {
-    projectPath = resolveAbsolutePath(args.project!)
+    log(.error, "Either --project or --workspace is required")
+    exit(1)
   }
   let projectDir = (projectPath as NSString).deletingLastPathComponent
 
@@ -350,7 +353,9 @@ func runPreview(_ args: PreviewArgs) {
 
   // PID-isolated derived data
   let derivedDataPath = "/tmp/preview-dynamic-dd-\(ProcessInfo.processInfo.processIdentifier)"
-  let previewDir = (projectDir as NSString).appendingPathComponent("PreviewHost")
+  let previewDir = (projectDir as NSString).appendingPathComponent(
+    ".preview-host-\(ProcessInfo.processInfo.processIdentifier)"
+  )
   do {
     try FileManager.default.createDirectory(atPath: previewDir, withIntermediateDirectories: true)
   } catch {
